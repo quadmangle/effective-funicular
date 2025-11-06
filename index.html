@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Mini E-Commerce · Shop + Owner Console</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#111820; --muted:#445; --text:#e8eef7; --accent:#6ee7ff;
+    --ok:#7CFC00; --warn:#ffcc00; --bad:#ff6b6b; --line:#1c2530;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,Segoe UI,Roboto,Arial}
+  header{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#0b0f14,#0a0e13)}
+  header h1{margin:0;font-size:16px;font-weight:700;letter-spacing:.3px}
+  nav button{background:transparent;border:1px solid var(--line);color:var(--text);padding:8px 12px;border-radius:8px;cursor:pointer}
+  nav button.active{border-color:var(--accent);color:var(--accent)}
+  main{display:grid;grid-template-columns:1fr;gap:16px;padding:16px;max-width:1100px;margin:0 auto}
+  .grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+  .card img{width:100%;height:120px;object-fit:cover;background:#0d1218}
+  .card .pad{padding:10px}
+  .name{font-weight:700;margin-bottom:6px}
+  .muted{color:#a9b6c6;font-size:12px}
+  .price{font-weight:700;margin-top:4px}
+  .btn, .btn-sm{border:1px solid var(--line);background:#111826;color:var(--text);border-radius:8px;cursor:pointer}
+  .btn{padding:10px 12px}
+  .btn-sm{padding:6px 8px;font-size:12px}
+  .btn.primary{border-color:var(--accent);color:#001018;background:var(--accent);font-weight:700}
+  .btn.inline{padding:6px 8px}
+  .stack{display:flex;flex-direction:column;gap:10px}
+  .row{display:flex;gap:10px;align-items:center}
+  .grow{flex:1}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px}
+  .cart-line{display:grid;grid-template-columns:1fr 70px 120px 130px;gap:8px;align-items:center;border-bottom:1px dashed var(--line);padding:6px 0}
+  .cart-line:last-child{border-bottom:none}
+  input, select{width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:#0e141b;color:var(--text)}
+  table{width:100%;border-collapse:collapse}
+  th, td{padding:8px;border-bottom:1px solid var(--line);text-align:left;font-size:12px}
+  th{color:#a9b6c6;font-weight:600}
+  .right{text-align:right}
+  .small{font-size:12px;color:#a9b6c6}
+  .ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+  .two{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+  .foot{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+  .tag{display:inline-block;padding:2px 6px;border:1px solid var(--line);border-radius:999px;font-size:11px;color:#9fb1c7}
+  @media (max-width:1100px){.grid{grid-template-columns:repeat(2,1fr)} .two{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Mini E-Commerce · Shop + Owner Console</h1>
+  <nav>
+    <button id="shopTab" class="active">Shop</button>
+    <button id="ownerTab">Owner Login</button>
+  </nav>
+</header>
+
+<main id="view-shop">
+  <div class="two">
+    <section>
+      <div class="panel foot">
+        <div>
+          <span class="tag">Sales VAT / IVA: <span id="vatTag">15%</span></span>
+          <span class="tag">Currency: <span id="curTag">USD</span></span>
+        </div>
+        <div class="small">Stock mirrors owner inventory. Add items → see cart at right/bottom.</div>
+      </div>
+      <div id="productGrid" class="grid"></div>
+    </section>
+    <aside>
+      <div class="panel stack">
+        <div class="row"><strong>Shopping Cart</strong><span class="grow"></span><button class="btn-sm" id="clearCart">Clear</button></div>
+        <div id="cartLines"></div>
+        <div style="border-top:1px solid var(--line);padding-top:8px">
+          <div class="row"><div class="grow">Subtotal</div><div id="subtotal" class="right">$0.00</div></div>
+          <div class="row"><div class="grow">VAT/IVA (<span id="vatPctLbl">15</span>%)</div><div id="vatAmt" class="right">$0.00</div></div>
+          <div class="row"><div class="grow"><strong>Total</strong></div><div id="total" class="right"><strong>$0.00</strong></div></div>
+        </div>
+      </div>
+
+      <div class="panel stack">
+        <strong>Delivery</strong>
+        <div class="row"><input id="dName" placeholder="Full name"/></div>
+        <div class="row"><input id="dPhone" placeholder="Phone"/></div>
+        <div class="row"><input id="dAddr" placeholder="Address / Directions"/></div>
+        <div class="row">
+          <select id="dMode">
+            <option value="delivery">Delivery</option>
+            <option value="pickup">Pickup</option>
+          </select>
+          <input id="dNotes" placeholder="Notes (optional)" />
+        </div>
+        <button class="btn primary" id="placeOrder">Place Order (simulate)</button>
+        <div class="small">This simulates checkout: inventory outflow + VAT recorded in the owner ledger.</div>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<main id="view-owner" style="display:none">
+  <section id="ownerLogin" class="panel stack">
+    <strong>Owner Login</strong>
+    <div class="row">
+      <input id="ownerPin" type="password" placeholder="Enter PIN (default 1234)"/>
+      <button class="btn primary" id="loginBtn">Login</button>
+    </div>
+    <div class="small">Demo auth only (client-side). Change PIN after login.</div>
+  </section>
+
+  <section id="ownerConsole" style="display:none" class="stack">
+    <div class="two">
+      <div class="panel stack">
+        <div class="row">
+          <strong>Store Settings</strong><span class="grow"></span>
+          <button class="btn-sm" id="logoutBtn">Logout</button>
+        </div>
+        <div class="row">
+          <label class="small">Sales VAT / IVA %</label>
+          <input id="setVat" type="number" min="0" max="100" step="0.1" />
+          <label class="small">Currency (symbol)</label>
+          <input id="setCur" maxlength="6" />
+          <label class="small">Owner PIN</label>
+          <input id="setPin" type="password" placeholder="Set new PIN"/>
+          <button class="btn-sm" id="saveSettings">Save</button>
+        </div>
+        <div class="small">VAT here controls the consumer totals; purchase VAT is recorded per purchase (input tax).</div>
+      </div>
+
+      <div class="panel stack">
+        <strong>Record Purchase (Inventory Inflow)</strong>
+        <div class="row">
+          <select id="purchProduct" class="grow"></select>
+        </div>
+        <div class="row">
+          <input id="purchQty" type="number" min="1" placeholder="Quantity purchased" />
+          <input id="purchUnitCost" type="number" step="0.01" placeholder="Unit cost (pre-VAT)" />
+          <input id="purchVatPct" type="number" min="0" max="100" step="0.1" placeholder="Purchase VAT %"/>
+        </div>
+        <div class="row">
+          <button class="btn primary" id="addPurchase">Add Purchase</button>
+          <span class="small">We use weighted average cost to compute profit and future earnings.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel stack">
+      <strong>Set Selling Prices</strong>
+      <div id="priceList" class="stack"></div>
+    </div>
+
+    <div class="panel stack">
+      <strong>Inventory & Ledger (Mirror of Shop)</strong>
+      <div class="small">Shows inflow/outflow, purchase VAT (input), sales VAT (output), revenue, COGS, profit, and future earnings.</div>
+      <div style="overflow:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th class="right">Inflow (qty)</th>
+              <th class="right">Outflow (qty)</th>
+              <th class="right">On Hand</th>
+              <th class="right">Avg Cost</th>
+              <th class="right">Selling Price</th>
+              <th class="right">Revenue</th>
+              <th class="right">COGS</th>
+              <th class="right">Profit</th>
+              <th class="right">Purch. VAT</th>
+              <th class="right">Sales VAT</th>
+              <th class="right">Future Earnings</th>
+            </tr>
+          </thead>
+          <tbody id="invBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+/* ==========================
+   Data model in localStorage
+   ========================== */
+const LS = {
+  products: 'mc_products',
+  purchases: 'mc_purchases',
+  sales: 'mc_sales',
+  settings: 'mc_settings'
+};
+
+const demoProducts = [
+  {name:'Marxia Café Classic 250g', price:7.50},
+  {name:'Marxia Cocoa Cookies', price:3.20},
+  {name:'Andes Honey 300ml', price:6.80},
+  {name:'Queso Fresco 200g', price:4.10},
+  {name:'Arepa Pack x6', price:3.90},
+  {name:'Tostadas Maíz 12u', price:2.80},
+  {name:'Salsa Ají 150ml', price:2.60},
+  {name:'Granola Andina 400g', price:5.40},
+  {name:'Café Espresso Pods x10', price:8.90},
+  {name:'Chocolate 70% 90g', price:3.70},
+];
+
+function loadSettings(){
+  const s = JSON.parse(localStorage.getItem(LS.settings) || 'null');
+  if (s) return s;
+  const def = { salesVatPct: 15, currency: 'USD', ownerPin: '1234' };
+  localStorage.setItem(LS.settings, JSON.stringify(def));
+  return def;
+}
+function saveSettings(s){ localStorage.setItem(LS.settings, JSON.stringify(s)); }
+
+function svgDataUri(label){
+  const bg = ['#203047','#2c3b52','#243247','#223044','#1c2838'][Math.floor(Math.random()*5)];
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='600' height='400'>
+    <rect width='100%' height='100%' fill='${bg}'/>
+    <text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle'
+      fill='#cfe6ff' font-family='Segoe UI,Roboto,Arial' font-size='28'>${label}</text>
+  </svg>`;
+  return 'data:image/svg+xml;base64,' + btoa(svg);
+}
+
+function loadProducts(){
+  let p = JSON.parse(localStorage.getItem(LS.products) || 'null');
+  if (!p){
+    p = demoProducts.map((d,i)=>({
+      id: 'p'+(i+1), name: d.name, price: d.price, stock: 10,
+      image: svgDataUri(d.name),
+    }));
+    localStorage.setItem(LS.products, JSON.stringify(p));
+  }
+  return p;
+}
+function saveProducts(p){ localStorage.setItem(LS.products, JSON.stringify(p)); }
+function loadPurchases(){ return JSON.parse(localStorage.getItem(LS.purchases) || '[]'); }
+function savePurchases(x){ localStorage.setItem(LS.purchases, JSON.stringify(x)); }
+function loadSales(){ return JSON.parse(localStorage.getItem(LS.sales) || '[]'); }
+function saveSales(x){ localStorage.setItem(LS.sales, JSON.stringify(x)); }
+
+/* ===============
+   Shop rendering
+   =============== */
+let state = {
+  products: loadProducts(),
+  purchases: loadPurchases(),
+  sales: loadSales(),
+  settings: loadSettings(),
+  cart: {} // {productId: qty}
+};
+
+const $ = sel => document.querySelector(sel);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
+
+function fmt(n){ return (state.settings.currency === 'USD' ? '$' : state.settings.currency+' ')+ (Number(n||0).toFixed(2)); }
+function byId(id){ return state.products.find(p=>p.id===id); }
+
+function renderShop(){
+  $('#vatTag').textContent = state.settings.salesVatPct+'%';
+  $('#vatPctLbl').textContent = state.settings.salesVatPct;
+  $('#curTag').textContent = state.settings.currency;
+
+  const grid = $('#productGrid'); grid.innerHTML = '';
+  state.products.forEach(p=>{
+    const card = document.createElement('div'); card.className='card';
+    card.innerHTML = `
+      <img alt="">
+      <div class="pad">
+        <div class="name">${p.name}</div>
+        <div class="muted">Stock: ${p.stock}</div>
+        <div class="price">${fmt(p.price)}</div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn inline" data-add="${p.id}">+ Add</button>
+          <span class="grow"></span>
+        </div>
+      </div>`;
+    card.querySelector('img').src = p.image;
+    grid.appendChild(card);
+  });
+
+  grid.addEventListener('click', e=>{
+    const id = e.target?.dataset?.add;
+    if (!id) return;
+    const prod = byId(id);
+    const inCart = state.cart[id]||0;
+    if (inCart >= prod.stock) { alert('Not enough stock'); return; }
+    state.cart[id] = inCart + 1;
+    renderCart();
+  });
+
+  $('#clearCart').onclick = ()=>{ state.cart = {}; renderCart(); };
+  $('#placeOrder').onclick = placeOrder;
+  renderCart();
+}
+
+function renderCart(){
+  const linesEl = $('#cartLines'); linesEl.innerHTML = '';
+  let subtotal = 0;
+  for (const [id,qty] of Object.entries(state.cart)){
+    const p = byId(id); if (!p) continue;
+    const line = document.createElement('div'); line.className='cart-line';
+    const lineSubtotal = p.price * qty; subtotal += lineSubtotal;
+    line.innerHTML = `
+      <div>${p.name}</div>
+      <div class="right">${qty}</div>
+      <div class="row" style="justify-content:flex-end;gap:6px">
+        <button class="btn-sm" data-dec="${id}">− Remove</button>
+        <button class="btn-sm" data-inc="${id}">+ Add</button>
+      </div>
+      <div class="right">${fmt(lineSubtotal)}</div>
+    `;
+    linesEl.appendChild(line);
+  }
+  linesEl.addEventListener('click', e=>{
+    const inc = e.target?.dataset?.inc;
+    const dec = e.target?.dataset?.dec;
+    if (inc){
+      const p = byId(inc);
+      const want = (state.cart[inc]||0)+1;
+      if (want > p.stock) { alert('Not enough stock'); return; }
+      state.cart[inc] = want;
+    }
+    if (dec){
+      const cur = state.cart[dec]||0;
+      if (cur<=1) delete state.cart[dec]; else state.cart[dec] = cur-1;
+    }
+    renderCart();
+  }, { once:true });
+
+  const vat = subtotal * (Number(state.settings.salesVatPct)||0)/100;
+  const total = subtotal + vat;
+  $('#subtotal').textContent = fmt(subtotal);
+  $('#vatAmt').textContent = fmt(vat);
+  $('#total').textContent = fmt(total);
+}
+
+function placeOrder(){
+  const items = Object.entries(state.cart);
+  if (!items.length){ alert('Cart is empty'); return; }
+  if (!$('#dName').value || !$('#dPhone').value){ alert('Please enter name and phone.'); return; }
+
+  // Verify stock
+  for (const [id,qty] of items){
+    const p = byId(id);
+    if (qty>p.stock){ alert(`Not enough stock for ${p.name}`); return; }
+  }
+
+  // Record sale lines
+  const vatPct = Number(state.settings.salesVatPct)||0;
+  const now = new Date().toISOString();
+  for (const [id,qty] of items){
+    const p = byId(id);
+    state.sales.push({
+      id, qty, unitPrice: p.price, vatPct, vatAmt: p.price*qty*vatPct/100,
+      date: now, customer: $('#dName').value.trim()
+    });
+    p.stock -= qty; // outflow
+  }
+  saveSales(state.sales); saveProducts(state.products);
+  state.cart = {}; renderShop(); // refresh stock
+  updateOwnerUI(); // mirror
+
+  alert('Order placed (simulated). Inventory and VAT updated in ledger.');
+}
+
+/* =================
+   Owner side (UI)
+   ================= */
+function renderOwnerLogin(){ /* panel already present */ }
+
+function requireOwner(){
+  $('#ownerTab').classList.add('active');
+  $('#shopTab').classList.remove('active');
+  $('#view-owner').style.display='';
+  $('#view-shop').style.display='none';
+}
+
+function renderOwnerConsole(){
+  // Settings
+  $('#setVat').value = state.settings.salesVatPct;
+  $('#setCur').value = state.settings.currency;
+  $('#setPin').value = '';
+
+  // Purchase form select
+  const sel = $('#purchProduct'); sel.innerHTML='';
+  state.products.forEach(p=>{
+    const o = document.createElement('option');
+    o.value=p.id; o.textContent=`${p.name} (on hand: ${p.stock})`;
+    sel.appendChild(o);
+  });
+
+  // Price list editor
+  const pl = $('#priceList'); pl.innerHTML='';
+  state.products.forEach(p=>{
+    const row = document.createElement('div'); row.className='row';
+    row.innerHTML = `
+      <div class="grow small">${p.name}</div>
+      <input type="number" step="0.01" value="${p.price}" data-price="${p.id}" style="width:130px"/>
+    `;
+    pl.appendChild(row);
+  });
+
+  updateOwnerUI();
+
+  // Handlers
+  $('#saveSettings').onclick = ()=>{
+    const s = state.settings;
+    s.salesVatPct = Number($('#setVat').value)||0;
+    s.currency = ($('#setCur').value||'USD').toUpperCase();
+    const newPin = $('#setPin').value.trim();
+    if (newPin) s.ownerPin = newPin;
+    saveSettings(s);
+    state.settings = s;
+    renderShop();
+    alert('Settings saved.');
+  };
+
+  $('#addPurchase').onclick = ()=>{
+    const id = $('#purchProduct').value;
+    const qty = Math.max(0, Number($('#purchQty').value));
+    const unit = Math.max(0, Number($('#purchUnitCost').value));
+    const vatPct = Math.max(0, Number($('#purchVatPct').value));
+    if (!id || !qty || !unit){ alert('Please fill product, quantity, and unit cost.'); return; }
+    const vatAmt = qty * unit * vatPct / 100;
+    state.purchases.push({ id, qty, unitCost: unit, vatPct, vatAmt, date: new Date().toISOString() });
+
+    // Update stock
+    const p = byId(id); p.stock += qty;
+    savePurchases(state.purchases); saveProducts(state.products);
+    // Clear form
+    $('#purchQty').value=''; $('#purchUnitCost').value=''; $('#purchVatPct').value='';
+    renderOwnerConsole(); renderShop();
+  };
+
+  $('#priceList').addEventListener('change', e=>{
+    const id = e.target?.dataset?.price;
+    if (!id) return;
+    const v = Number(e.target.value)||0;
+    const p = byId(id); p.price = v;
+    saveProducts(state.products);
+    renderShop(); updateOwnerUI();
+  });
+}
+
+function updateOwnerUI(){
+  // Inventory / ledger table
+  const body = $('#invBody'); body.innerHTML='';
+  const currency = state.settings.currency;
+
+  // Precompute aggregates
+  const purchBy = {}; const salesBy = {};
+  state.purchases.forEach(x=>{
+    purchBy[x.id] = purchBy[x.id] || {qty:0, cost:0, vat:0};
+    purchBy[x.id].qty += x.qty;
+    purchBy[x.id].cost += x.qty * x.unitCost; // pre-VAT cost
+    purchBy[x.id].vat  += x.vatAmt;
+  });
+  state.sales.forEach(x=>{
+    salesBy[x.id] = salesBy[x.id] || {qty:0, revenue:0, vat:0};
+    salesBy[x.id].qty += x.qty;
+    salesBy[x.id].revenue += x.qty * x.unitPrice; // pre-VAT revenue
+    salesBy[x.id].vat     += x.vatAmt;
+  });
+
+  function avgCost(id){
+    const p = purchBy[id]; if (!p || !p.qty) return 0;
+    return p.cost / p.qty;
+  }
+
+  state.products.forEach(p=>{
+    const inflow = purchBy[p.id]?.qty || 0;
+    const outflow = salesBy[p.id]?.qty || 0;
+    const onHand = p.stock; // mirrors inflow - outflow
+    const ac = avgCost(p.id);
+    const revenue = salesBy[p.id]?.revenue || 0;
+    const cogs = outflow * ac;
+    const profit = revenue - cogs;
+    const purchVat = purchBy[p.id]?.vat || 0;
+    const salesVat = salesBy[p.id]?.vat || 0;
+    const futureEarnings = onHand * (p.price - ac);
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${p.name}</td>
+      <td class="right">${inflow}</td>
+      <td class="right">${outflow}</td>
+      <td class="right">${onHand}</td>
+      <td class="right">${fmt(ac)}</td>
+      <td class="right">${fmt(p.price)}</td>
+      <td class="right">${fmt(revenue)}</td>
+      <td class="right">${fmt(cogs)}</td>
+      <td class="right ${profit>=0?'ok':'bad'}">${fmt(profit)}</td>
+      <td class="right">${fmt(purchVat)}</td>
+      <td class="right">${fmt(salesVat)}</td>
+      <td class="right ${futureEarnings>=0?'ok':'bad'}">${fmt(futureEarnings)}</td>
+    `;
+    body.appendChild(tr);
+  });
+}
+
+/* ==================
+   Tabs and login
+   ================== */
+$('#shopTab').onclick = ()=>{
+  $('#shopTab').classList.add('active');
+  $('#ownerTab').classList.remove('active');
+  $('#view-shop').style.display='';
+  $('#view-owner').style.display='none';
+};
+$('#ownerTab').onclick = ()=> requireOwner();
+
+$('#loginBtn').onclick = ()=>{
+  const pin = $('#ownerPin').value;
+  if (pin === state.settings.ownerPin){
+    $('#ownerLogin').style.display='none';
+    $('#ownerConsole').style.display='';
+    renderOwnerConsole();
+  } else {
+    alert('Wrong PIN');
+  }
+};
+$('#logoutBtn').onclick = ()=>{
+  $('#ownerConsole').style.display='none';
+  $('#ownerLogin').style.display='';
+  $('#ownerPin').value='';
+};
+
+/* ================
+   Boot
+   ================ */
+renderShop();
+renderOwnerLogin();
+</script>
+</body>
+</html>
